@@ -50,7 +50,7 @@ fetch("/api/me")
   .then(r => (r.ok ? r.json() : null))
   .then(me => {
     if (!me || !me.loggedIn) return;
-    document.getElementById("loginBtn").textContent = me.accounts[0].account;
+    document.getElementById("loginBtn").textContent = "Logged in";
   })
   .catch(() => {});
 

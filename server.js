@@ -132,48 +132,88 @@ function open(token) {
   }
 }
 
+const AUTH_BASE = 'https://auth.deriv.com/oauth2';
+const b64url = buf => Buffer.from(buf).toString('base64url');
+const PKCE_TTL_MS = 10 * 60 * 1000;
+
+// The callback URL must exactly match the redirect URL registered on Deriv.
+// Set REDIRECT_URI in the environment to pin it; otherwise it is built from the request.
+function redirectUri(req) {
+  return process.env.REDIRECT_URI || `${req.protocol}://${req.get('host')}/auth/callback`;
+}
+
+// Step 1: send the visitor to Deriv's login page (OAuth 2.0 authorization code flow with PKCE).
 app.get('/auth/login', (req, res) => {
   if (!APP_ID) return res.status(500).send('DERIV_APP_ID is not configured on the server.');
-  res.redirect(`https://oauth.deriv.com/oauth2/authorize?app_id=${encodeURIComponent(APP_ID)}&l=EN`);
+  const state = crypto.randomBytes(16).toString('hex');
+  const verifier = b64url(crypto.randomBytes(32));
+  const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
+  res.cookie('pkce', seal({ state, verifier, created: Date.now() }), {
+    httpOnly: true, sameSite: 'lax', secure: IS_PROD, maxAge: PKCE_TTL_MS
+  });
+  const url = new URL(`${AUTH_BASE}/auth`);
+  url.search = new URLSearchParams({
+    response_type: 'code',
+    client_id: APP_ID,
+    redirect_uri: redirectUri(req),
+    scope: 'trade',
+    state,
+    code_challenge: challenge,
+    code_challenge_method: 'S256'
+  }).toString();
+  res.redirect(url.toString());
 });
 
 app.get('/auth/signup', (req, res) => res.redirect(SIGNUP_URL));
 
-// Deriv redirects here with ?acct1=...&token1=...&cur1=...&acct2=... etc.
-app.get('/auth/callback', (req, res) => {
-  const accounts = [];
-  for (let i = 1; req.query[`acct${i}`]; i++) {
-    accounts.push({
-      account: String(req.query[`acct${i}`]),
-      token: String(req.query[`token${i}`] || ''),
-      currency: String(req.query[`cur${i}`] || '')
-    });
+// Step 2: Deriv sends the visitor back here with ?code=...&state=...
+// The code is exchanged for an access token on the server, never in the browser.
+app.get('/auth/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+  const p = req.cookies.pkce ? open(req.cookies.pkce) : null;
+  res.clearCookie('pkce');
+  if (error || !code || !p || p.state !== state || Date.now() - p.created > PKCE_TTL_MS) {
+    return res.redirect('/?login=failed');
   }
-  if (!accounts.length) return res.redirect('/?login=failed');
-
-  res.cookie('sid', seal({ accounts, created: Date.now() }), {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: IS_PROD,
-    maxAge: SESSION_TTL_MS
-  });
-  // Tokens are kept server-side only; they are not placed in the page URL.
-  res.redirect('/?login=success');
+  try {
+    const r = await fetch(`${AUTH_BASE}/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: APP_ID,
+        code: String(code),
+        code_verifier: p.verifier,
+        redirect_uri: redirectUri(req)
+      })
+    });
+    const tok = await r.json().catch(() => ({}));
+    if (!r.ok || !tok.access_token) {
+      console.error('Token exchange failed:', r.status, tok.error || '');
+      return res.redirect('/?login=failed');
+    }
+    const ttl = Math.min((Number(tok.expires_in) || 3600) * 1000, SESSION_TTL_MS);
+    // The access token stays in an encrypted, httpOnly cookie and is never sent to page scripts.
+    res.cookie('sid', seal({ accessToken: tok.access_token, created: Date.now(), ttl }), {
+      httpOnly: true, sameSite: 'lax', secure: IS_PROD, maxAge: ttl
+    });
+    res.redirect('/?login=success');
+  } catch (e) {
+    console.error('Token exchange error:', e.message);
+    res.redirect('/?login=failed');
+  }
 });
 
 function getSession(req) {
   const s = req.cookies.sid ? open(req.cookies.sid) : null;
-  return s && Date.now() - s.created < SESSION_TTL_MS ? s : null;
+  return s && Date.now() - s.created < (s.ttl || SESSION_TTL_MS) ? s : null;
 }
 
-// Safe info for the front end (no tokens)
+// Safe info for the front end (never includes the token)
 app.get('/api/me', (req, res) => {
   const s = getSession(req);
   if (!s) return res.status(401).json({ loggedIn: false });
-  res.json({
-    loggedIn: true,
-    accounts: s.accounts.map(({ account, currency }) => ({ account, currency }))
-  });
+  res.json({ loggedIn: true });
 });
 
 app.post('/auth/logout', (req, res) => {
