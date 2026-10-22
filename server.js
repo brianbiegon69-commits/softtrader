@@ -102,15 +102,35 @@ app.get('/api/ticks', (req, res) => {
 /* Deriv OAuth login                                                   */
 /* ------------------------------------------------------------------ */
 
-// Sessions live in memory. For production with several server instances,
-// replace this Map with Redis or a database.
-const sessions = new Map(); // sid -> { accounts: [{ account, token, currency }], created }
+// Sessions are stored in an encrypted cookie (AES-256-GCM), not in server memory,
+// so login keeps working on serverless hosts like Vercel where every request may
+// hit a different instance. Set SESSION_SECRET to a long random string in production.
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+if (!process.env.SESSION_SECRET) {
+  console.warn('WARNING: SESSION_SECRET is not set. Using a temporary key: logins will not survive restarts or work across serverless instances.');
+}
+const KEY = crypto.createHash('sha256')
+  .update(process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'))
+  .digest();
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [sid, s] of sessions) if (now - s.created > SESSION_TTL_MS) sessions.delete(sid);
-}, 60 * 60 * 1000).unref();
+function seal(data) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', KEY, iv);
+  const enc = Buffer.concat([cipher.update(JSON.stringify(data), 'utf8'), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), enc]).toString('base64url');
+}
+
+function open(token) {
+  try {
+    const buf = Buffer.from(String(token), 'base64url');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', KEY, buf.subarray(0, 12));
+    decipher.setAuthTag(buf.subarray(12, 28));
+    const out = Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]);
+    return JSON.parse(out.toString('utf8'));
+  } catch {
+    return null;
+  }
+}
 
 app.get('/auth/login', (req, res) => {
   if (!APP_ID) return res.status(500).send('DERIV_APP_ID is not configured on the server.');
@@ -131,9 +151,7 @@ app.get('/auth/callback', (req, res) => {
   }
   if (!accounts.length) return res.redirect('/?login=failed');
 
-  const sid = crypto.randomBytes(32).toString('hex');
-  sessions.set(sid, { accounts, created: Date.now() });
-  res.cookie('sid', sid, {
+  res.cookie('sid', seal({ accounts, created: Date.now() }), {
     httpOnly: true,
     sameSite: 'lax',
     secure: IS_PROD,
@@ -144,7 +162,7 @@ app.get('/auth/callback', (req, res) => {
 });
 
 function getSession(req) {
-  const s = sessions.get(req.cookies.sid);
+  const s = req.cookies.sid ? open(req.cookies.sid) : null;
   return s && Date.now() - s.created < SESSION_TTL_MS ? s : null;
 }
 
@@ -159,7 +177,6 @@ app.get('/api/me', (req, res) => {
 });
 
 app.post('/auth/logout', (req, res) => {
-  sessions.delete(req.cookies.sid);
   res.clearCookie('sid');
   res.json({ ok: true });
 });
@@ -171,3 +188,5 @@ app.get('/api/health', (req, res) => res.json({ ok: true, derivConnected: ws && 
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => console.log(`Pulsedesk server running on http://localhost:${PORT}`));
+
+module.exports = app; // lets serverless hosts such as Vercel use the app directly
