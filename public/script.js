@@ -139,11 +139,11 @@ document.getElementById("year").textContent = new Date().getFullYear();
     set("sName", "Even Keel 100");
     set("sMarket", "Volatility 100");
     set("sType", "Even / Odd");
-    set("sEntry", "Always trade Even, 1 tick duration, on a Deriv DEMO account. No pattern-watching.");
-    set("sExit", "Same small stake every trade, never changed. Take 100 trades. Stop early if the demo balance falls 10% in one session.");
+    set("sEntry", "Always trade Even, 1 tick duration. No pattern-watching.");
+    set("sExit", "Same small stake every trade, never changed. Take 100 trades. Stop early if the balance falls 10% in one session.");
     set("sStake", "1");
-    set("sLoss", "10% of demo balance");
-    set("sNotes", "Log every result. Break-even needs roughly 51-52% wins at a ~95% payout (check your payout). Compare the win rate with chance before changing anything. Change one thing at a time. Do not move to real money because of a short demo run.");
+    set("sLoss", "10% of balance");
+    set("sNotes", "Log every result. Break-even needs roughly 51-52% wins at a ~95% payout (check your payout). Compare the win rate with chance before changing anything. Change one thing at a time. Practise on a demo account first.");
     if (focusAfter) document.getElementById("sName").focus();
   }
   function clearForm() {
