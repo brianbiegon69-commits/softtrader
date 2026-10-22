@@ -134,7 +134,7 @@ document.getElementById("year").textContent = new Date().getFullYear();
   });
 
   /* Example strategy: fills the form with a practice test */
-  document.getElementById("tplBtn").addEventListener("click", () => {
+  function fillExample(focusAfter) {
     const set = (id, val) => { document.getElementById(id).value = val; };
     set("sName", "Even Keel 100");
     set("sMarket", "Volatility 100");
@@ -144,8 +144,16 @@ document.getElementById("year").textContent = new Date().getFullYear();
     set("sStake", "1");
     set("sLoss", "10% of demo balance");
     set("sNotes", "Log every result. Break-even needs roughly 51-52% wins at a ~95% payout (check your payout). Compare the win rate with chance before changing anything. Change one thing at a time. Do not move to real money because of a short demo run.");
+    if (focusAfter) document.getElementById("sName").focus();
+  }
+  function clearForm() {
+    ["sName","sEntry","sExit","sStake","sLoss","sNotes"].forEach(id => { document.getElementById(id).value = ""; });
     document.getElementById("sName").focus();
-  });
+  }
+  document.getElementById("tplBtn").addEventListener("click", () => fillExample(true));
+  document.getElementById("clearBtn").addEventListener("click", clearForm);
+  // Start with the example already filled in (no focus, so the page does not scroll).
+  fillExample(false);
 
   render();
 
