@@ -55,3 +55,98 @@ fetch("/api/me")
   .catch(() => {});
 
 document.getElementById("year").textContent = new Date().getFullYear();
+
+
+/* ---------- Strategy notebook (saved in this browser only) ---------- */
+(function () {
+  const KEY = "pulsedesk_strategies";
+  const form = document.getElementById("sForm");
+  if (!form) return;
+  const list = document.getElementById("saved");
+  const countEl = document.getElementById("count");
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; }
+  }
+  function store(items) {
+    try { localStorage.setItem(KEY, JSON.stringify(items)); } catch { /* storage blocked */ }
+  }
+  function line(label, text) {
+    if (!text) return null;
+    const p = document.createElement("p");
+    const b = document.createElement("b");
+    b.textContent = label + ": ";
+    p.append(b, document.createTextNode(text));
+    return p;
+  }
+  function render() {
+    const items = load();
+    countEl.textContent = items.length ? "(" + items.length + ")" : "";
+    list.replaceChildren();
+    if (!items.length) {
+      const e = document.createElement("p");
+      e.className = "empty";
+      e.textContent = "Nothing saved yet. Fill in the form and press Save strategy.";
+      list.append(e);
+      return;
+    }
+    items.forEach(it => {
+      const box = document.createElement("div");
+      box.className = "saved-item";
+      const h = document.createElement("h4"); h.textContent = it.name;
+      const m = document.createElement("div"); m.className = "meta"; m.textContent = it.market + " \u00b7 " + it.type;
+      box.append(h, m);
+      [line("Entry", it.entry), line("Exit / stake", it.exit),
+       line("Stake", it.stake), line("Daily loss limit", it.loss), line("Notes", it.notes)]
+        .filter(Boolean).forEach(n => box.append(n));
+      const del = document.createElement("button");
+      del.type = "button"; del.textContent = "Delete";
+      del.onclick = () => { store(load().filter(x => x.id !== it.id)); render(); };
+      box.append(del);
+      list.append(box);
+    });
+  }
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const v = id => document.getElementById(id).value.trim();
+    const name = v("sName");
+    if (!name) return;
+    const items = load();
+    items.unshift({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name, market: v("sMarket"), type: v("sType"),
+      entry: v("sEntry"), exit: v("sExit"), stake: v("sStake"), loss: v("sLoss"), notes: v("sNotes"),
+      saved: new Date().toISOString()
+    });
+    store(items.slice(0, 100));
+    form.reset();
+    render();
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(load(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "pulsedesk-strategies.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+
+  render();
+
+  /* Stake calculator */
+  const bal = document.getElementById("cBal"), risk = document.getElementById("cRisk"), out = document.getElementById("cOut");
+  function calc() {
+    const b = parseFloat(bal.value), r = parseFloat(risk.value);
+    if (!(b > 0) || !(r > 0) || r > 100) { out.textContent = "Enter your balance to see a suggested maximum stake."; return; }
+    const stake = b * r / 100;
+    out.replaceChildren(
+      document.createTextNode("Suggested maximum stake per trade: "),
+      Object.assign(document.createElement("b"), { textContent: stake.toFixed(2) }),
+      document.createTextNode(" (" + r + "% of " + b + "). This is a guide for limiting losses, not advice.")
+    );
+  }
+  bal.addEventListener("input", calc);
+  risk.addEventListener("input", calc);
+})();

@@ -86,8 +86,36 @@
   footer{padding:36px 0 50px;color:var(--muted);font-size:13.5px;border-top:1px solid var(--line)}
   .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 
+
+  /* Strategies */
+  .cards.two{grid-template-columns:repeat(2,1fr)}
+  .tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--violet);border:1px solid rgba(138,125,255,.4);border-radius:999px;padding:1px 8px;margin-bottom:10px}
+  .card ul{margin:8px 0 0 18px;color:var(--muted);font-size:14.5px}
+  .card ul li{margin-bottom:4px}
+  .card .risk-note{margin-top:10px;font-size:13.5px;color:#f1c9ce}
+  .nb{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+  .panel h3{font-size:17px;margin-bottom:14px}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  input,select,textarea{width:100%;background:var(--ink);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:14.5px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--violet);outline-offset:1px}
+  textarea{min-height:70px;resize:vertical}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  .saved-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:var(--ink)}
+  .saved-item h4{font-size:16px;margin-bottom:2px}
+  .saved-item .meta{font-size:12.5px;color:var(--violet);margin-bottom:8px}
+  .saved-item p{font-size:14px;color:var(--muted);margin:4px 0;white-space:pre-wrap}
+  .saved-item p b{color:var(--text)}
+  .saved-item button{margin-top:8px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:4px 12px;font-size:12.5px;cursor:pointer}
+  .saved-item button:hover{color:var(--down);border-color:var(--down)}
+  .empty{color:var(--muted);font-size:14.5px}
+  .calc{margin-top:22px}
+  .calc .out{margin-top:14px;font-size:15px}
+  .calc .out b{color:var(--amber);font-size:20px}
+
   @media(max-width:820px){
-    .hero-grid,.cards,.steps{grid-template-columns:1fr}
+    .hero-grid,.cards,.cards.two,.steps,.nb,.two-col{grid-template-columns:1fr}
     .links{display:none}
     .hero{padding-top:48px}
   }
@@ -100,6 +128,8 @@
     <a class="logo" href="/"><i></i>Pulsedesk</a>
     <div class="links">
       <a href="#features">Features</a>
+      <a href="#strategies">Strategies</a>
+      <a href="#notebook">Notebook</a>
       <a href="#how">How it works</a>
       <a href="#faq">FAQ</a>
     </div>
@@ -148,8 +178,103 @@
       </div>
       <div class="card">
         <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h6"/></svg></div>
-        <h3>Strategy notebook <span class="soon">Soon</span></h3>
-        <p>Keep notes and rules for each strategy next to the markets you trade them on.</p>
+        <h3>Strategy notebook</h3>
+        <p>Write down the rules for each strategy and keep them next to the markets you trade. <a href="#notebook" style="color:var(--amber)">Open the notebook</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="strategies">
+  <div class="wrap">
+    <h2>Strategy library</h2>
+    <p class="sub">Plain-English notes on common approaches, for learning. On synthetic indices the price moves are random by design, so no strategy guarantees a profit, and every one of them can lose money.</p>
+    <div class="cards two">
+      <div class="card">
+        <span class="tag">Digits</span>
+        <h3>Even / Odd</h3>
+        <p>You predict whether the last digit of the next tick will be even or odd. The two outcomes are roughly equally likely, so a pattern in recent digits does not give you an edge.</p>
+        <ul><li>Use a small, fixed stake</li><li>Decide how many trades you will take before you start</li><li>Stop at your daily loss limit</li></ul>
+      </div>
+      <div class="card">
+        <span class="tag">Digits</span>
+        <h3>Over / Under</h3>
+        <p>You pick a barrier digit and predict whether the last digit will be over or under it. A barrier that is less likely to hit pays more, and one that is more likely to hit pays less, so the odds are priced in.</p>
+        <ul><li>Check the payout against the real probability</li><li>Higher payout means lower chance, not free money</li><li>Keep the stake the same on every trade</li></ul>
+      </div>
+      <div class="card">
+        <span class="tag">Direction</span>
+        <h3>Rise / Fall</h3>
+        <p>You predict whether the price will finish higher or lower after a set duration. Following a recent trend can feel right, but short-term moves on synthetic indices are not predictable.</p>
+        <ul><li>Practise on a demo account first</li><li>Write your entry rule down before trading</li><li>Do not change the rule in the middle of a losing run</li></ul>
+      </div>
+      <div class="card">
+        <span class="tag">Risk</span>
+        <h3>Risk management rules</h3>
+        <p>These matter more than any entry signal, because they limit how much you can lose.</p>
+        <ul><li>Risk only a small part of your balance per trade (many traders use 1&ndash;2%)</li><li>Set a daily loss limit and stop when you reach it</li><li>Stop after a set number of losses in a row</li><li>Never increase your stake to win back losses</li></ul>
+        <p class="risk-note">Doubling the stake after a loss (martingale) can wipe out an account in a short losing streak.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="notebook" class="alt">
+  <div class="wrap">
+    <h2>Strategy notebook</h2>
+    <p class="sub">Write your rules down before you trade. Notes are saved in this browser only, so they stay on your device. Use Export to keep a copy.</p>
+    <div class="nb">
+      <div class="panel">
+        <h3>New strategy</h3>
+        <form id="sForm" autocomplete="off">
+          <label for="sName">Name</label>
+          <input id="sName" maxlength="60" placeholder="e.g. Even/Odd, 10 trades" required>
+          <div class="two-col">
+            <div>
+              <label for="sMarket">Market</label>
+              <select id="sMarket">
+                <option>Volatility 10</option><option>Volatility 25</option><option>Volatility 50</option>
+                <option>Volatility 75</option><option>Volatility 100</option><option>Bull Market</option><option>Bear Market</option>
+              </select>
+            </div>
+            <div>
+              <label for="sType">Contract type</label>
+              <select id="sType">
+                <option>Even / Odd</option><option>Over / Under</option><option>Rise / Fall</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <label for="sEntry">Entry rule</label>
+          <textarea id="sEntry" maxlength="500" placeholder="When exactly will you enter a trade?"></textarea>
+          <label for="sExit">Exit and stake rule</label>
+          <textarea id="sExit" maxlength="500" placeholder="Stake size, duration, when you stop"></textarea>
+          <div class="two-col">
+            <div><label for="sStake">Stake per trade</label><input id="sStake" type="number" min="0" step="any" placeholder="e.g. 1"></div>
+            <div><label for="sLoss">Daily loss limit</label><input id="sLoss" type="number" min="0" step="any" placeholder="e.g. 5"></div>
+          </div>
+          <label for="sNotes">Notes</label>
+          <textarea id="sNotes" maxlength="800" placeholder="What you learned, what to change"></textarea>
+          <div class="actions">
+            <button class="btn btn-solid" type="submit">Save strategy</button>
+            <button class="btn btn-ghost" type="reset">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h3>Saved strategies <span id="count" style="color:var(--muted);font-weight:400"></span></h3>
+          <div id="saved"></div>
+          <div class="actions"><button class="btn btn-ghost" id="exportBtn" type="button">Export as file</button></div>
+        </div>
+        <div class="panel calc">
+          <h3>Stake calculator</h3>
+          <div class="two-col">
+            <div><label for="cBal">Balance</label><input id="cBal" type="number" min="0" step="any" placeholder="e.g. 100"></div>
+            <div><label for="cRisk">Risk per trade (%)</label><input id="cRisk" type="number" min="0" max="100" step="any" value="1"></div>
+          </div>
+          <div class="out" id="cOut">Enter your balance to see a suggested maximum stake.</div>
+        </div>
       </div>
     </div>
   </div>
