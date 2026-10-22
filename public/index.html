@@ -32,6 +32,15 @@
   .btn-solid:hover{filter:brightness(1.08);transform:translateY(-1px)}
   .btn-ghost{background:transparent;border-color:var(--line);color:var(--text)}
   button.btn{font-family:inherit;line-height:1.2}
+
+  .runner .out{margin-top:12px;font-size:14.5px;color:var(--muted)}
+  .runner .out b{color:var(--text)}
+  .runner .bad{color:var(--down)}
+  .rrow{display:flex;justify-content:space-between;gap:10px;padding:6px 2px;border-top:1px solid var(--line);font-size:13.5px;font-variant-numeric:tabular-nums}
+  .rrow .w{color:var(--up)} .rrow .l{color:var(--down)}
+  #rLog{margin-top:10px;max-height:220px;overflow:auto}
+  .runner details{margin:14px 0 0;padding:10px 14px}
+  .runner pre{white-space:pre-wrap;word-break:break-all;font-size:11.5px;color:var(--muted);max-height:220px;overflow:auto;margin-top:8px}
   .btn-green{background:#22b573;color:#04170d;border-color:#22b573}
   .btn-green:hover{filter:brightness(1.1);transform:translateY(-1px)}
   .btn-ghost:hover{border-color:var(--muted)}
@@ -281,6 +290,26 @@
             <div><label for="cRisk">Risk per trade (%)</label><input id="cRisk" type="number" min="0" max="100" step="any" value="1"></div>
           </div>
           <div class="out" id="cOut">Enter your balance to see a suggested maximum stake.</div>
+        </div>
+
+        <div class="panel calc runner" id="runner">
+          <h3>Practice runner <span class="tag" style="margin:0 0 0 6px">Demo account only</span></h3>
+          <p class="empty">Places the Even Keel 100 trades for you on your Deriv <b>demo</b> account (virtual money) and shows the results. It will not run on a real account.</p>
+          <div class="two-col">
+            <div><label for="rStake">Stake per trade</label><input id="rStake" type="number" min="0.35" max="100" step="any" value="1"></div>
+            <div><label for="rTrades">Trades (max 100)</label><input id="rTrades" type="number" min="1" max="100" step="1" value="100"></div>
+          </div>
+          <label for="rLoss">Stop if the demo loss reaches</label>
+          <input id="rLoss" type="number" min="0" step="any" value="10">
+          <div class="actions">
+            <button class="btn btn-green" id="rStart" type="button">Start demo run</button>
+            <button class="btn btn-ghost" id="rStop" type="button" disabled>Stop</button>
+            <a class="btn btn-ghost" id="rLogin" href="/auth/login" style="display:none">Log in with Deriv</a>
+          </div>
+          <div class="out" id="rStatus">Log in with Deriv to use the runner.</div>
+          <div class="out" id="rSummary"></div>
+          <div id="rLog"></div>
+          <details><summary>Debug log</summary><pre id="rDebug">Nothing yet.</pre></details>
         </div>
       </div>
     </div>

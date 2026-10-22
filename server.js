@@ -222,6 +222,85 @@ app.post('/auth/logout', (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
+/* Demo practice runner: hands the browser a DEMO-only WebSocket URL    */
+/* ------------------------------------------------------------------ */
+
+const API_BASE = 'https://api.derivws.com';
+
+// Deriv's response shapes for these calls are not fully documented, so the parsing here is
+// deliberately tolerant. The hard safety rule does not depend on it: a connection URL is only
+// ever returned to the browser if Deriv itself says it is a /ws/demo endpoint.
+function extractAccounts(json) {
+  const cands = [json, json && json.data, json && json.data && json.data.accounts, json && json.accounts];
+  for (const c of cands) if (Array.isArray(c)) return c;
+  return [];
+}
+function accountId(a) {
+  return a && (a.account_id || a.accountId || a.id || a.loginid || a.login_id);
+}
+function looksDemo(a) {
+  if (!a || typeof a !== 'object') return false;
+  if (a.is_virtual === true || a.is_virtual === 1 || a.isVirtual === true) return true;
+  const hints = [a.account_type, a.accountType, a.type, a.group, a.mode, a.environment, accountId(a)]
+    .filter(v => typeof v === 'string').join(' ').toLowerCase();
+  return /demo|virtual|^vrt|\bvrt/.test(hints);
+}
+function sanitize(a) {
+  const out = {};
+  for (const [k, v] of Object.entries(a || {})) {
+    if (/token|secret|password|otp/i.test(k)) continue;
+    out[k] = typeof v === 'object' ? '[object]' : v;
+  }
+  return out;
+}
+
+app.post('/api/demo/otp', async (req, res) => {
+  const s = getSession(req);
+  if (!s) return res.status(401).json({ message: 'Please log in with Deriv first.' });
+  const headers = { Authorization: `Bearer ${s.accessToken}` };
+  try {
+    const ar = await fetch(`${API_BASE}/trading/v1/options/accounts`, { headers });
+    const aj = await ar.json().catch(() => ({}));
+    if (!ar.ok) {
+      console.error('Accounts request failed:', ar.status);
+      return res.status(502).json({ message: `Deriv refused the accounts request (${ar.status}). Try logging in again.` });
+    }
+    const accounts = extractAccounts(aj);
+    const demos = accounts.filter(looksDemo);
+    // Only ever try accounts that look like demo accounts. If none do, stop and say so.
+    const tryList = demos.slice(0, 3);
+    if (!tryList.length) {
+      return res.status(404).json({
+        message: 'No demo account was found on your Deriv login. Open a demo account on Deriv first.',
+        accounts: accounts.slice(0, 10).map(sanitize)
+      });
+    }
+    for (const a of tryList) {
+      const id = accountId(a);
+      if (!id) continue;
+      const or = await fetch(`${API_BASE}/trading/v1/options/accounts/${encodeURIComponent(id)}/otp`, { method: 'POST', headers });
+      const oj = await or.json().catch(() => ({}));
+      const url = (oj && oj.data && oj.data.url) || (oj && oj.url);
+      // Hard rule: the URL itself must be Deriv's demo endpoint, otherwise it is discarded.
+      if (or.ok && typeof url === 'string' && /^wss:\/\/[^/]*derivws\.com\/.*\/ws\/demo\?/.test(url)) {
+        return res.json({
+          url,
+          accountId: String(id),
+          currency: a.currency || a.currency_code || a.account_currency || null
+        });
+      }
+    }
+    return res.status(404).json({
+      message: 'Could not open a demo connection. The account list is shown in the debug log.',
+      accounts: accounts.slice(0, 10).map(sanitize)
+    });
+  } catch (e) {
+    console.error('Demo OTP error:', e.message);
+    return res.status(502).json({ message: 'Could not reach Deriv. Try again in a moment.' });
+  }
+});
+
+/* ------------------------------------------------------------------ */
 
 app.get('/api/health', (req, res) => res.json({ ok: true, derivConnected: ws && ws.readyState === WebSocket.OPEN }));
 
