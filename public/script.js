@@ -136,7 +136,7 @@ document.getElementById("year").textContent = new Date().getFullYear();
   /* Demo template: fills the form with a practice test */
   document.getElementById("tplBtn").addEventListener("click", () => {
     const set = (id, val) => { document.getElementById(id).value = val; };
-    set("sName", "Demo test: Even/Odd, 100 trades");
+    set("sName", "Even Keel 100 (demo test)");
     set("sMarket", "Volatility 100");
     set("sType", "Even / Odd");
     set("sEntry", "Always trade Even, 1 tick duration, on a Deriv DEMO account. No pattern-watching.");
